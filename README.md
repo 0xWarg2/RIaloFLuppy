@@ -1,13 +1,13 @@
 # Fluppy Bird
 
-Trò chơi Flappy Bird mini viết bằng Python và Pygame, sử dụng bộ asset trong thư mục `assets/FluffyBirds-Free-Ver` cùng các hiệu ứng âm thanh ở `assets/sounds`.
+A lightweight Flappy Bird remake written with Python and Pygame. It uses the sprites from `assets/FluffyBirds-Free-Ver` together with the sound effects in `assets/sounds`.
 
-## Yêu cầu
+## Requirements
 
-- Python 3.9 trở lên
-- Phụ thuộc: xem `requirements.txt`
+- Python 3.9 or newer
+- Dependencies listed in `requirements.txt`
 
-Tùy chọn nhưng khuyến nghị:
+Recommended setup:
 
 ```bash
 python3 -m venv .venv
@@ -15,60 +15,68 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Cách chạy
+## Run
 
 ```bash
 python3 game.py
 ```
 
-### macOS (Terminal dùng Bash)
+ On launch you will see a difficulty picker (Easy / Normal / Hard). Use `↑/↓` or `W/S` to highlight an option and press `Enter` or `Space` to start. Press `Space` after a game over to revisit the picker. To bypass the menu entirely, set an environment variable before running, for example `FLUPPY_DIFFICULTY=hard python3 game.py`.
+
+### macOS Bash shortcut
 
 ```bash
 /bin/bash -lc 'cd /Users/xuanhaj/Dev/game/RIaloFLuppy && source .venv/bin/activate && python3 game.py'
 ```
 
-## Điều khiển
+## Controls
 
-- Nhấn `Space`, `↑` hoặc click chuột trái để vỗ cánh.
-- Khi thua, nhấn `Space` để chơi lại.
+- `Space`, `↑`, or left mouse click to flap.
+- When you lose, press `Space` to restart.
 
-## Đặc điểm chính
+## Features
 
-- Parallax background với bầu trời, mây, hàng cây và toà nhà từ bộ asset gốc.
-- 04 biến thể thân cây (`Logs.png`) được chọn ngẫu nhiên cho mỗi cặp ống trên/dưới.
-- Chim sử dụng 3 frame động và 1 frame thua từ `Red_Bird.png` (thứ tự: thua → cánh ngang → cánh hạ → cánh hạ sâu).
-- Âm thanh vỗ cánh, đạt điểm và va chạm lấy từ thư mục `assets/sounds`.
-- Hiển thị điểm hiện tại, kỷ lục và gợi ý điều khiển trực tiếp trên màn hình.
+- Parallax background built from the layered sky, clouds, trees, and buildings.
+- Four log variants (`Logs.png`) chosen at random for every pipe pair.
+- The red bird sheet provides three flap frames and one defeat frame.
+- Built-in scoring HUD with current score and personal best.
+- Difficulty presets (Easy / Normal / Hard) that adjust pipe speed, spacing, spawn rate, bird scale, and optionally add swaying pipes.
 
-## Tuỳ chỉnh gameplay nhanh
+## Tuning
 
-Các hằng số chính nằm đầu file `game.py`:
+Key constants live in `fluppy/settings.py`:
 
-- `PIPE_SPEED`, `PIPE_GAP`, `PIPE_SPAWN_MS`: điều chỉnh tốc độ, khoảng cách, nhịp sinh ống.
-- `GRAVITY`, `FLAP_VELOCITY`, `MAX_DROP_SPEED`: cân bằng cảm giác bay.
-- `SCREEN_WIDTH`, `SCREEN_HEIGHT`: kích thước cửa sổ game.
+- `PIPE_SPEED`, `PIPE_GAP`, `PIPE_SPAWN_MS`
+- `GRAVITY`, `FLAP_VELOCITY`, `MAX_DROP_SPEED`
+- `SCREEN_WIDTH`, `SCREEN_HEIGHT`
+- `BIRD_SCALE`
+- `DIFFICULTIES` and `DIFFICULTY` for preset configuration
 
-Chỉnh sửa giá trị và chạy lại `game.py` để áp dụng.
+Edit the values and rerun `game.py` to experiment.
 
-## Cấu trúc thư mục
+## Packaging
+
+- Local build: `python -m pip install pyinstaller && python scripts/build_pyinstaller.py`. The executable lands in `dist/` together with the bundled assets.
+- CI build: push a `v*` tag (or use *Run workflow* in GitHub Actions) to trigger `.github/workflows/build.yml`, which uploads platform-specific bundles.
+
+## Project Layout
 
 ```
 assets/
   FluffyBirds-Free-Ver/
-    Buildings.png
-    Clouds.png
-    Grass.png
-    Logs.png
-    Red_Bird.png
-    Sky.png
-    Trees.png
   sounds/
-    sfx_die.wav
-    sfx_hit.wav
-    sfx_point.wav
-    sfx_swooshing.wav
-    sfx_wing.wav
-game.py
+fluppy/
+  __init__.py
+  __main__.py
+  app.py          # FluppyGame and the main loop
+  assets.py       # sprite and sound loaders
+  difficulty.py   # preset resolution & helpers
+  entities.py     # Bird, PipePair, scrolling background layers
+  main.py         # runtime entry point (handles menu + loop)
+  settings.py     # global constants and presets
+  state.py        # GameState enum
+game.py           # short entry that calls fluppy.main
+requirements.txt
 ```
 
-Bạn có thể thêm font hoặc biến thể asset khác, chỉ cần cập nhật đường dẫn trong `game.py` nếu đổi tên.
+Feel free to add fonts or alternative assets—just update the paths if you rename anything.
