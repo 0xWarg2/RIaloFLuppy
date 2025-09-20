@@ -13,35 +13,31 @@ from .entities import PipeVariant, ScrollingLayer
 def _load_and_scale_background(asset_root: Path, filename: str) -> pygame.Surface:
     path = asset_root / filename
     image = pygame.image.load(str(path)).convert_alpha()
-    scale = max(
-        settings.SCREEN_WIDTH / image.get_width(),
-        settings.SCREEN_HEIGHT / image.get_height(),
-    )
+    scale = settings.SCREEN_HEIGHT / image.get_height()
     size = (int(image.get_width() * scale), int(image.get_height() * scale))
     return pygame.transform.smoothscale(image, size)
 
 
 def load_background_layers(asset_root: Path) -> tuple[ScrollingLayer, List[ScrollingLayer], ScrollingLayer]:
     layers: List[ScrollingLayer] = []
-    static_surface = None
-    for image_name, speed in settings.BACKGROUND_LAYERS:
-        surface = _load_and_scale_background(asset_root, image_name)
-        if speed == 0:
-            static_surface = surface
-            continue
-        y = settings.SCREEN_HEIGHT - surface.get_height()
-        layers.append(ScrollingLayer(surface, speed, y))
-    if static_surface is None:
+    if settings.BACKGROUND_LAYERS:
+        first_name, first_speed = settings.BACKGROUND_LAYERS[0]
+        first_surface = _load_and_scale_background(asset_root, first_name)
+        y = settings.SCREEN_HEIGHT - first_surface.get_height()
+        sky_layer = ScrollingLayer(first_surface, first_speed, y)
+        for image_name, speed in settings.BACKGROUND_LAYERS[1:]:
+            surface = _load_and_scale_background(asset_root, image_name)
+            y = settings.SCREEN_HEIGHT - surface.get_height()
+            layers.append(ScrollingLayer(surface, speed, y))
+    else:
         sky_surface = pygame.Surface((settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT))
         sky_surface.fill((90, 200, 255))
         sky_layer = ScrollingLayer(sky_surface, 0)
-    else:
-        sky_layer = ScrollingLayer(static_surface, 0, settings.SCREEN_HEIGHT - static_surface.get_height())
 
     grass_surface = load_ground(asset_root)
     grass_layer = ScrollingLayer(
         grass_surface,
-        settings.PIPE_SPEED,
+        settings.GROUND_SCROLL_SPEED,
         settings.SCREEN_HEIGHT - grass_surface.get_height(),
     )
     return sky_layer, layers, grass_layer
@@ -50,17 +46,12 @@ def load_background_layers(asset_root: Path) -> tuple[ScrollingLayer, List[Scrol
 def load_ground(asset_root: Path) -> pygame.Surface:
     path = asset_root / settings.GRASS_IMAGE
     image = pygame.image.load(str(path)).convert_alpha()
-    slice_height = 320
-    rect = pygame.Rect(0, image.get_height() - slice_height, image.get_width(), slice_height)
-    slice_surface = image.subsurface(rect).copy()
-    scale = settings.SCREEN_WIDTH / slice_surface.get_width()
-    target_height = int(slice_surface.get_height() * scale)
-    ground_surface = pygame.transform.smoothscale(slice_surface, (settings.SCREEN_WIDTH, target_height))
-    if ground_surface.get_height() > settings.GROUND_TARGET_HEIGHT:
-        ground_surface = pygame.transform.smoothscale(
-            ground_surface, (settings.SCREEN_WIDTH, settings.GROUND_TARGET_HEIGHT)
-        )
-    return ground_surface
+    scale = settings.SCREEN_HEIGHT / image.get_height()
+    scaled_size = (int(image.get_width() * scale), settings.SCREEN_HEIGHT)
+    scaled = pygame.transform.smoothscale(image, scaled_size)
+    slice_height = min(settings.GROUND_TARGET_HEIGHT, scaled.get_height())
+    rect = pygame.Rect(0, scaled.get_height() - slice_height, scaled.get_width(), slice_height)
+    return scaled.subsurface(rect).copy()
 
 
 def load_pipe_variants(asset_root: Path) -> List[PipeVariant]:

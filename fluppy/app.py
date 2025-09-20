@@ -25,6 +25,8 @@ class FluppyGame:
         self.score_font = pygame.font.SysFont(None, settings.SCORE_FONT_SIZE)
 
         self.sounds = assets.load_sounds(asset_root.parent / "sounds")
+        self._music_channel = None
+        self._start_music()
         self.sky, self.layers, self.ground = assets.load_background_layers(asset_root)
         self.pipe_variants = assets.load_pipe_variants(asset_root)
 
@@ -40,6 +42,18 @@ class FluppyGame:
         sound = self.sounds.get(name)
         if sound:
             sound.play()
+
+    def _start_music(self) -> None:
+        music = self.sounds.get("backgroundmusic")
+        if not music:
+            return
+        music.set_volume(settings.MUSIC_VOLUME)
+        channel = getattr(self, "_music_channel", None)
+        if channel and channel.get_busy():
+            return
+        self._music_channel = music.play(loops=-1)
+        if self._music_channel:
+            self._music_channel.set_volume(settings.MUSIC_VOLUME)
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -66,14 +80,18 @@ class FluppyGame:
         self.ground.reset()
 
     def spawn_pipe(self) -> None:
-        margin = 180
-        max_height = settings.SCREEN_HEIGHT - self.ground.surface.get_height() - margin
-        gap_y = random.randint(margin, max_height)
+        top_margin = 180
+        ground_top = settings.SCREEN_HEIGHT - self.ground.surface.get_height()
+        min_center = max(top_margin, settings.PIPE_GAP // 2)
+        max_center = ground_top - settings.PIPE_GAP // 2
+        gap_y = random.randint(min_center, max_center)
         pipe = PipePair(
             self.pipe_variants,
             settings.SCREEN_WIDTH + 100,
             gap_y,
             settings.PIPE_GAP,
+            min_center,
+            max_center,
             sway_amplitude=self.sway_amplitude,
             sway_speed=self.sway_speed,
         )
