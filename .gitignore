@@ -13,7 +13,6 @@ venv/
 ENV/
 
 # PyInstaller
-build/
 dist/
 
 # OS junk
