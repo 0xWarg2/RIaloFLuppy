@@ -25,8 +25,9 @@ class FluppyGame:
         self.score_font = pygame.font.SysFont(None, settings.SCORE_FONT_SIZE)
 
         self.sounds = assets.load_sounds(asset_root.parent / "sounds")
-        self._music_channel = None
-        self._start_music()
+        self._music_sound = self.sounds.get("backgroundmusic")
+        self._music_channel: pygame.mixer.Channel | None = None
+        self._music_started = False
         self.sky, self.layers, self.ground = assets.load_background_layers(asset_root)
         self.pipe_variants = assets.load_pipe_variants(asset_root)
 
@@ -44,16 +45,20 @@ class FluppyGame:
             sound.play()
 
     def _start_music(self) -> None:
-        music = self.sounds.get("backgroundmusic")
-        if not music:
+        if self._music_started or not self._music_sound:
             return
-        music.set_volume(settings.MUSIC_VOLUME)
-        channel = getattr(self, "_music_channel", None)
-        if channel and channel.get_busy():
+        if not pygame.mixer.get_init():
+            try:
+                pygame.mixer.init()
+            except pygame.error:
+                return
+        self._music_sound.set_volume(settings.MUSIC_VOLUME)
+        channel = self._music_sound.play(loops=-1)
+        if not channel:
             return
-        self._music_channel = music.play(loops=-1)
-        if self._music_channel:
-            self._music_channel.set_volume(settings.MUSIC_VOLUME)
+        channel.set_volume(settings.MUSIC_VOLUME)
+        self._music_channel = channel
+        self._music_started = True
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -108,6 +113,7 @@ class FluppyGame:
             pygame.event.post(pygame.event.Event(pygame.QUIT))
 
     def _on_flap_request(self) -> None:
+        self._start_music()
         if self.state == GameState.READY:
             self.state = GameState.PLAYING
             self.bird.flap()
