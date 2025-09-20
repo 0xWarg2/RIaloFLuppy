@@ -59,6 +59,13 @@ Edit the values and rerun `game.py` to experiment.
 - Local build: `python -m pip install pyinstaller && python scripts/build_pyinstaller.py`. The executable lands in `dist/` together with the bundled assets.
 - CI build: push a `v*` tag (or use *Run workflow* in GitHub Actions) to trigger `.github/workflows/build.yml`, which uploads platform-specific bundles.
 
+## Web Export (pygbag)
+
+1. Install the tooling once: `python -m pip install pygbag pygame-ce`.
+2. Run `python -m pygbag --build game.py` from the project root. The exported WebAssembly bundle appears in `build/web/` (contains `index.html`, `.wasm`, assets, etc.).
+3. Zip the *contents* of `build/web/` (not the folder itself) and upload to your favourite static host (Itch.io, Netlify, Cloudflare Pages, Vercel, …).
+   - For Itch.io, create a new **HTML5** project, upload the zip, tick “play in browser”, and set the viewport (e.g., 960×540).
+
 ## Project Layout
 
 ```

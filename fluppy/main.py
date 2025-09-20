@@ -1,6 +1,7 @@
 """Runtime entry for the Fluppy game."""
 from __future__ import annotations
 
+import asyncio
 import os
 import sys
 from pathlib import Path
@@ -14,7 +15,7 @@ from . import settings
 from .difficulty import list_difficulties
 
 
-def choose_difficulty(screen: pygame.Surface, game: FluppyGame | None = None) -> str | None:
+async def choose_difficulty(screen: pygame.Surface, game: FluppyGame | None = None) -> str | None:
     if os.environ.get("FLUPPY_DIFFICULTY"):
         # Environment variable already controls difficulty.
         return None
@@ -71,30 +72,53 @@ def choose_difficulty(screen: pygame.Surface, game: FluppyGame | None = None) ->
 
         pygame.display.flip()
         clock.tick(30)
+        await asyncio.sleep(0)
 
     settings.DIFFICULTY = options[index]
     return options[index]
 
 
 def _resource_root() -> Path:
+    """Return the directory that contains bundled assets.
+
+    When packaged with tools like PyInstaller or pygbag the Python files may
+    live inside an intermediate directory (e.g. `/data/data/<pkg>/assets`). We
+    therefore resolve the parent directory of the package and use it as a
+    search root instead of assuming the project layout.
+    """
+
     if hasattr(sys, "_MEIPASS"):
         return Path(getattr(sys, "_MEIPASS"))
     return Path(__file__).resolve().parent.parent
 
 
-def main() -> None:
+def _find_asset_dir(base_path: Path) -> Path:
+    """Locate the sprite pack regardless of how the project was bundled."""
+
+    candidates = (
+        base_path / "assets" / "FluffyBirds-Free-Ver",
+        base_path / "FluffyBirds-Free-Ver",
+    )
+    for path in candidates:
+        if path.exists():
+            return path
+    raise FileNotFoundError(
+        "Asset directory not found. Looked for: "
+        + ", ".join(str(path) for path in candidates)
+    )
+
+
+async def main_async() -> None:
     pygame.init()
     screen = pygame.display.set_mode((settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT))
     pygame.display.set_caption("Fluppy Bird")
 
     base_path = _resource_root()
-    asset_root = base_path.joinpath("assets", "FluffyBirds-Free-Ver")
-    if not asset_root.exists():
-        raise FileNotFoundError(f"Asset directory not found: {asset_root}")
+    asset_root = _find_asset_dir(base_path)
     game = FluppyGame(screen, asset_root)
     clock = pygame.time.Clock()
 
-    selected = choose_difficulty(screen, game)
+    selected = await choose_difficulty(screen, game)
     if selected:
         game.configure_for_difficulty()
         game.reset()
@@ -107,7 +131,7 @@ def main() -> None:
                 running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE and game.state == GameState.GAME_OVER:
                 prev = settings.DIFFICULTY
-                choice = choose_difficulty(screen, game)
+                choice = await choose_difficulty(screen, game)
                 if choice and choice != prev:
                     game.configure_for_difficulty()
                 game.reset()
@@ -116,7 +140,12 @@ def main() -> None:
         game.update(dt)
         game.draw()
         pygame.display.flip()
+        await asyncio.sleep(0)
     pygame.quit()
+
+
+def main() -> None:
+    asyncio.run(main_async())
 
 
 if __name__ == "__main__":

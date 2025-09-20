@@ -26,6 +26,8 @@ class PipePair:
         x: float,
         gap_y: float,
         gap: int,
+        min_center: float,
+        max_center: float,
         sway_amplitude: int = 0,
         sway_speed: float = 0.0,
     ) -> None:
@@ -35,26 +37,31 @@ class PipePair:
         self.bottom_mask = bottom_variant.mask
         self.top_image = pygame.transform.flip(top_variant.image, False, True)
         self.top_mask = pygame.mask.from_surface(self.top_image)
-        self.bottom_rect = self.bottom_image.get_rect(midtop=(x, gap_y + gap / 2))
-        self.top_rect = self.top_image.get_rect(midbottom=(x, gap_y - gap / 2))
+        self.gap = gap
+        self.min_center = min_center
+        self.max_center = max_center
+        clamped_center = max(self.min_center, min(gap_y, self.max_center))
+        half_gap = self.gap / 2
+        self.bottom_rect = self.bottom_image.get_rect(midtop=(x, clamped_center + half_gap))
+        self.top_rect = self.top_image.get_rect(midbottom=(x, clamped_center - half_gap))
         self.x = float(self.bottom_rect.centerx)
         self.passed = False
         self.sway_amplitude = sway_amplitude
         self.sway_speed = sway_speed
-        self.base_gap_center = gap_y
+        self.base_gap_center = clamped_center
         self.time = 0.0
 
     def update(self, dt: float) -> None:
         self.x -= settings.PIPE_SPEED * dt
-        self.bottom_rect.centerx = int(self.x)
-        self.top_rect.centerx = int(self.x)
+        half_gap = self.gap / 2
+        center = self.base_gap_center
         if self.sway_amplitude and self.sway_speed:
             self.time += dt * self.sway_speed
             offset = math.sin(self.time) * self.sway_amplitude
             center = self.base_gap_center + offset
-            half_gap = settings.PIPE_GAP / 2
-            self.bottom_rect.midtop = (int(self.x), int(center + half_gap))
-            self.top_rect.midbottom = (int(self.x), int(center - half_gap))
+        center = max(self.min_center, min(center, self.max_center))
+        self.bottom_rect.midtop = (int(self.x), int(center + half_gap))
+        self.top_rect.midbottom = (int(self.x), int(center - half_gap))
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.blit(self.top_image, self.top_rect)
@@ -145,10 +152,17 @@ class Bird:
 
 class ScrollingLayer:
     def __init__(self, surface: pygame.Surface, speed: float, y: int = 0) -> None:
-        self.surface = surface
         self.speed = speed
         self.y = y
-        self.width = surface.get_width()
+        if surface.get_width() <= settings.SCREEN_WIDTH:
+            self.surface = surface
+        else:
+            mirrored = pygame.transform.flip(surface, True, False)
+            expanded = pygame.Surface((surface.get_width() * 2, surface.get_height()), pygame.SRCALPHA)
+            expanded.blit(surface, (0, 0))
+            expanded.blit(mirrored, (surface.get_width(), 0))
+            self.surface = expanded
+        self.width = self.surface.get_width()
         self.positions = [0.0, float(self.width)]
 
     def reset(self) -> None:
