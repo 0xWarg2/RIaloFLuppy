@@ -24,7 +24,8 @@ class FluppyGame:
         self.font = pygame.font.SysFont(None, settings.GAME_FONT_SIZE)
         self.score_font = pygame.font.SysFont(None, settings.SCORE_FONT_SIZE)
 
-        self.sounds = assets.load_sounds(asset_root.parent / "sounds")
+        self.sound_folder = asset_root.parent / "sounds"
+        self.sounds = assets.load_sounds(self.sound_folder)
         self._music_sound = self.sounds.get("backgroundmusic")
         self._music_channel: pygame.mixer.Channel | None = None
         self._music_started = False
@@ -40,11 +41,26 @@ class FluppyGame:
     # ------------------------------------------------------------------
     # Audio helper
     def _play_sound(self, name: str) -> None:
+        self._ensure_audio()
         sound = self.sounds.get(name)
         if sound:
             sound.play()
 
+    def _ensure_audio(self) -> None:
+        if self.sounds and pygame.mixer.get_init():
+            return
+        if not pygame.mixer.get_init():
+            try:
+                pygame.mixer.init()
+            except pygame.error:
+                return
+        reloaded = assets.load_sounds(self.sound_folder)
+        if reloaded:
+            self.sounds = reloaded
+            self._music_sound = self.sounds.get("backgroundmusic")
+
     def _start_music(self) -> None:
+        self._ensure_audio()
         if self._music_started or not self._music_sound:
             return
         if not pygame.mixer.get_init():
